@@ -48,10 +48,31 @@ function checkOS() {
 }
 
 function getHomeDirForClient() {
-    # Your existing implementation or placeholder
-    # For example:
-    # echo "/home/$(getent passwd $1 | cut -d: -f6)"
-    # Note: Ensure this function returns the appropriate home directory path.
+local CLIENT_NAME=$1
+
+	if [ -z "${CLIENT_NAME}" ]; then
+		echo "Error: getHomeDirForClient() requires a client name as argument"
+		exit 1
+	fi
+
+	# Home directory of the user, where the client configuration will be written
+	if [ -e "/home/${CLIENT_NAME}" ]; then
+		# if $1 is a user name
+		HOME_DIR="/home/${CLIENT_NAME}"
+	elif [ "${SUDO_USER}" ]; then
+		# if not, use SUDO_USER
+		if [ "${SUDO_USER}" == "root" ]; then
+			# If running sudo as root
+			HOME_DIR="/root"
+		else
+			HOME_DIR="/home/${SUDO_USER}"
+		fi
+	else
+		# if not SUDO_USER, use /root
+		HOME_DIR="/root"
+	fi
+
+	echo "$HOME_DIR"
 }
 
 function initialCheck() {
