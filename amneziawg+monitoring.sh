@@ -91,27 +91,6 @@ function getHomeDirForClient() {
 
 	echo "$HOME_DIR"
 }
-function installAmneziaWG() {
-    # Run setup questions first
-    installQuestions
-
-    # Install AmneziaWG tools and module
-    if [[ ${OS} == 'ubuntu' ]]; then
-        # existing installation steps...
-    elif [[ ${OS} == 'debian' ]]; then
-        # existing installation steps...
-    elif [[ ${OS} == 'fedora' ]]; then
-        # existing installation steps...
-    elif [[ ${OS} == 'centos' ]] || [[ ${OS} == 'almalinux' ]] || [[ ${OS} == 'rocky' ]]; then
-        # existing installation steps...
-    fi
-
-    # Install and configure Apache monitoring
-    installApacheMonitoring
-    configureModStatus
-
-    echo "AmneziaWG and Apache monitoring setup completed."
-}
 
 function initialCheck() {
 	isRoot
