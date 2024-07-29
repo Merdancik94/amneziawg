@@ -387,78 +387,78 @@ net.ipv6.conf.all.forwarding = 1" >/etc/sysctl.d/awg.conf
 }
 
 function newClient() {
-	# If SERVER_PUB_IP is IPv6, add brackets if missing
-	if [[ ${SERVER_PUB_IP} =~ .*:.* ]]; then
-		if [[ ${SERVER_PUB_IP} != *"["* ]] || [[ ${SERVER_PUB_IP} != *"]"* ]]; then
-			SERVER_PUB_IP="[${SERVER_PUB_IP}]"
-		fi
-	fi
-	ENDPOINT="${SERVER_PUB_IP}:${SERVER_PORT}"
+    # If SERVER_PUB_IP is IPv6, add brackets if missing
+    if [[ ${SERVER_PUB_IP} =~ .*:.* ]]; then
+        if [[ ${SERVER_PUB_IP} != *"["* ]] || [[ ${SERVER_PUB_IP} != *"]"* ]]; then
+            SERVER_PUB_IP="[${SERVER_PUB_IP}]"
+        fi
+    fi
+    ENDPOINT="${SERVER_PUB_IP}:${SERVER_PORT}"
 
-	echo ""
-	echo "Client configuration"
-	echo ""
-	echo "The client name must consist of alphanumeric character(s). It may also include underscores or dashes and can't exceed 15 chars."
+    echo ""
+    echo "Client configuration"
+    echo ""
+    echo "The client name must consist of alphanumeric character(s). It may also include underscores or dashes and can't exceed 15 chars."
 
-	until [[ ${CLIENT_NAME} =~ ^[a-zA-Z0-9_-]+$ && ${CLIENT_EXISTS} == '0' && ${#CLIENT_NAME} -lt 16 ]]; do
-		read -rp "Client name: " -e CLIENT_NAME
-		CLIENT_EXISTS=$(grep -c -E "^### Client ${CLIENT_NAME}\$" "${SERVER_AWG_CONF}")
+    until [[ ${CLIENT_NAME} =~ ^[a-zA-Z0-9_-]+$ && ${CLIENT_EXISTS} == '0' && ${#CLIENT_NAME} -lt 16 ]]; do
+        read -rp "Client name: " -e CLIENT_NAME
+        CLIENT_EXISTS=$(grep -c -E "^### Client ${CLIENT_NAME}\$" "${SERVER_AWG_CONF}")
 
-		if [[ ${CLIENT_EXISTS} != 0 ]]; then
-			echo ""
-			echo -e "${ORANGE}A client with the specified name was already created, please choose another name.${NC}"
-			echo ""
-		fi
-	done
+        if [[ ${CLIENT_EXISTS} != 0 ]]; then
+            echo ""
+            echo -e "${ORANGE}A client with the specified name was already created, please choose another name.${NC}"
+            echo ""
+        fi
+    done
 
-	for DOT_IP in {2..254}; do
-		DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
-		if [[ ${DOT_EXISTS} == '0' ]]; then
-			break
-		fi
-	done
+    for DOT_IP in {2..254}; do
+        DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
+        if [[ ${DOT_EXISTS} == '0' ]]; then
+            break
+        fi
+    done
 
-	if [[ ${DOT_EXISTS} == '1' ]]; then
-		echo ""
-		echo "The subnet configured supports only 253 clients."
-		exit 1
-	fi
+    if [[ ${DOT_EXISTS} == '1' ]]; then
+        echo ""
+        echo "The subnet configured supports only 253 clients."
+        exit 1
+    fi
 
-	BASE_IP=$(echo "$SERVER_AWG_IPV4" | awk -F '.' '{ print $1"."$2"."$3 }')
-	until [[ ${IPV4_EXISTS} == '0' ]]; do
-		read -rp "Client AmneziaWG IPv4: ${BASE_IP}." -e -i "${DOT_IP}" DOT_IP
-		CLIENT_AWG_IPV4="${BASE_IP}.${DOT_IP}"
-		IPV4_EXISTS=$(grep -c "$CLIENT_AWG_IPV4/32" "${SERVER_AWG_CONF}")
+    BASE_IP=$(echo "$SERVER_AWG_IPV4" | awk -F '.' '{ print $1"."$2"."$3 }')
+    until [[ ${IPV4_EXISTS} == '0' ]]; do
+        read -rp "Client AmneziaWG IPv4: ${BASE_IP}." -e -i "${DOT_IP}" DOT_IP
+        CLIENT_AWG_IPV4="${BASE_IP}.${DOT_IP}"
+        IPV4_EXISTS=$(grep -c "$CLIENT_AWG_IPV4/32" "${SERVER_AWG_CONF}")
 
-		if [[ ${IPV4_EXISTS} != 0 ]]; then
-			echo ""
-			echo -e "${ORANGE}A client with the specified IPv4 was already created, please choose another IPv4.${NC}"
-			echo ""
-		fi
-	done
+        if [[ ${IPV4_EXISTS} != 0 ]]; then
+            echo ""
+            echo -e "${ORANGE}A client with the specified IPv4 was already created, please choose another IPv4.${NC}"
+            echo ""
+        fi
+    done
 
-	BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
-	until [[ ${IPV6_EXISTS} == '0' ]]; do
-		read -rp "Client AmneziaWG IPv6: ${BASE_IP}::" -e -i "${DOT_IP}" DOT_IP
-		CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
-		IPV6_EXISTS=$(grep -c "${CLIENT_AWG_IPV6}/128" "${SERVER_AWG_CONF}")
+    BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
+    until [[ ${IPV6_EXISTS} == '0' ]]; do
+        read -rp "Client AmneziaWG IPv6: ${BASE_IP}::" -e -i "${DOT_IP}" DOT_IP
+        CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
+        IPV6_EXISTS=$(grep -c "${CLIENT_AWG_IPV6}/128" "${SERVER_AWG_CONF}")
 
-		if [[ ${IPV6_EXISTS} != 0 ]]; then
-			echo ""
-			echo -e "${ORANGE}A client with the specified IPv6 was already created, please choose another IPv6.${NC}"
-			echo ""
-		fi
-	done
+        if [[ ${IPV6_EXISTS} != 0 ]]; then
+            echo ""
+            echo -e "${ORANGE}A client with the specified IPv6 was already created, please choose another IPv6.${NC}"
+            echo ""
+        fi
+    done
 
-	# Generate key pair for the client
-	CLIENT_PRIV_KEY=$(awg genkey)
-	CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
-	CLIENT_PRE_SHARED_KEY=$(awg genpsk)
+    # Generate key pair for the client
+    CLIENT_PRIV_KEY=$(awg genkey)
+    CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
+    CLIENT_PRE_SHARED_KEY=$(awg genpsk)
 
-	HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME}")
+    HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME}")
 
-	# Create client file and add the server as a peer
-	echo "[Interface]
+    # Create client file and add the server as a peer
+    echo "[Interface]
 PrivateKey = ${CLIENT_PRIV_KEY}
 Address = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128
 DNS = ${CLIENT_DNS_1},${CLIENT_DNS_2}
@@ -476,26 +476,27 @@ H4 = ${SERVER_AWG_H4}
 PublicKey = ${SERVER_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
 Endpoint = ${ENDPOINT}
-AllowedIPs = ${ALLOWED_IPS}" >"${HOME_DIR}/${SERVER_AWG_NIC}-client-${CLIENT_NAME}.conf"
+AllowedIPs = ${ALLOWED_IPS}" >"${HOME_DIR}/${CLIENT_NAME}.conf"
 
-	# Add the client as a peer to the server
-	echo -e "\n### Client ${CLIENT_NAME}
+    # Add the client as a peer to the server
+    echo -e "\n### Client ${CLIENT_NAME}
 [Peer]
 PublicKey = ${CLIENT_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
 AllowedIPs = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128" >>"${SERVER_AWG_CONF}"
 
-	awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
+    awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 
-	# Generate QR code if qrencode is installed
-	if command -v qrencode &>/dev/null; then
-		echo -e "${GREEN}\nHere is your client config file as a QR Code:\n${NC}"
-		qrencode -t ansiutf8 -l L <"${HOME_DIR}/${SERVER_AWG_NIC}-client-${CLIENT_NAME}.conf"
-		echo ""
-	fi
+    # Generate QR code if qrencode is installed
+    if command -v qrencode &>/dev/null; then
+        echo -e "${GREEN}\nHere is your client config file as a QR Code:\n${NC}"
+        qrencode -t ansiutf8 -l L <"${HOME_DIR}/${CLIENT_NAME}.conf"
+        echo ""
+    fi
 
-	echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${SERVER_AWG_NIC}-client-${CLIENT_NAME}.conf${NC}"
+    echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME}.conf${NC}"
 }
+
 
 function listClients() {
 	NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}")
