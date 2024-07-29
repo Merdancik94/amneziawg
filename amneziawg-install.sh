@@ -152,103 +152,67 @@ function readH1AndH2AndH3AndH4() {
 }
 
 function installQuestions() {
-	echo "AmneziaWG server installer (https://github.com/romikb/amneziawg-install)"
-	echo ""
-	echo "I need to ask you a few questions before starting the setup."
-	echo "You can keep the default options and just press enter if you are ok with them."
-	echo ""
+    echo "AmneziaWG server installer (https://github.com/romikb/amneziawg-install)"
+    echo ""
+    echo "I need to ask you a few questions before starting the setup."
+    echo "You can keep the default options and just press enter if you are ok with them."
+    echo ""
 
-	# Detect public IPv4 or IPv6 address and pre-fill for the user
-	SERVER_PUB_IP=$(ip -4 addr | sed -ne 's|^.* inet \([^/]*\)/.* scope global.*$|\1|p' | awk '{print $1}' | head -1)
-	if [[ -z ${SERVER_PUB_IP} ]]; then
-		# Detect public IPv6 address
-		SERVER_PUB_IP=$(ip -6 addr | sed -ne 's|^.* inet6 \([^/]*\)/.* scope global.*$|\1|p' | head -1)
-	fi
-	read -rp "Public IPv4 or IPv6 address or domain: " -e -i "${SERVER_PUB_IP}" SERVER_PUB_IP
+    # Detect public IPv4 or IPv6 address and pre-fill for the user
+    SERVER_PUB_IP=$(ip -4 addr | sed -ne 's|^.* inet \([^/]*\)/.* scope global.*$|\1|p' | awk '{print $1}' | head -1)
+    if [[ -z ${SERVER_PUB_IP} ]]; then
+        # Detect public IPv6 address
+        SERVER_PUB_IP=$(ip -6 addr | sed -ne 's|^.* inet6 \([^/]*\)/.* scope global.*$|\1|p' | head -1)
+    fi
+    read -rp "Public IPv4 or IPv6 address or domain: " -e -i "${SERVER_PUB_IP}" SERVER_PUB_IP
 
-	# Detect public interface and pre-fill for the user
-	SERVER_NIC="$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)"
-	until [[ ${SERVER_PUB_NIC} =~ ^[a-zA-Z0-9_]+$ ]]; do
-		read -rp "Public interface: " -e -i "${SERVER_NIC}" SERVER_PUB_NIC
-	done
+    # Prompt for DNS settings
+    echo "Choose DNS provider:"
+    echo "1) Google DNS"
+    echo "2) Cloudflare DNS"
+    echo "3) AdGuard DNS"
+    until [[ ${DNS_CHOICE} =~ ^[1-3]$ ]]; do
+        read -rp "DNS choice [1-3]: " -e -i 1 DNS_CHOICE
+    done
 
-	until [[ ${SERVER_AWG_NIC} =~ ^[a-zA-Z0-9_]+$ && ${#SERVER_AWG_NIC} -lt 16 ]]; do
-		read -rp "AmneziaWG interface name: " -e -i awg0 SERVER_AWG_NIC
-	done
+    case ${DNS_CHOICE} in
+        1)
+            CLIENT_DNS_1="8.8.8.8"
+            CLIENT_DNS_2="8.8.4.4"
+            ;;
+        2)
+            CLIENT_DNS_1="1.1.1.1"
+            CLIENT_DNS_2="1.0.0.1"
+            ;;
+        3)
+            CLIENT_DNS_1="94.140.14.14"
+            CLIENT_DNS_2="94.140.15.15"
+            ;;
+    esac
 
-	until [[ ${SERVER_AWG_IPV4} =~ ^([0-9]{1,3}\.){3} ]]; do
-		read -rp "Server AmneziaWG IPv4: " -e -i 10.66.66.1 SERVER_AWG_IPV4
-	done
+    # Use default values for other settings
+    SERVER_PUB_NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
+    SERVER_AWG_NIC="awg0"
+    SERVER_AWG_IPV4="10.66.66.1"
+    SERVER_AWG_IPV6="fd42:42:42::1"
+    SERVER_PORT=$(shuf -i49152-65535 -n1)
+    ALLOWED_IPS="0.0.0.0/0,::/0"
+    SERVER_AWG_JC=$(shuf -i3-10 -n1)
+    SERVER_AWG_JMIN=50
+    SERVER_AWG_JMAX=1000
+    SERVER_AWG_S1=$(shuf -i15-150 -n1)
+    SERVER_AWG_S2=$(shuf -i15-150 -n1)
+    SERVER_AWG_H1=$(shuf -i5-2147483647 -n1)
+    SERVER_AWG_H2=$(shuf -i5-2147483647 -n1)
+    SERVER_AWG_H3=$(shuf -i5-2147483647 -n1)
+    SERVER_AWG_H4=$(shuf -i5-2147483647 -n1)
 
-	until [[ ${SERVER_AWG_IPV6} =~ ^([a-f0-9]{1,4}:){3,4}: ]]; do
-		read -rp "Server AmneziaWG IPv6: " -e -i fd42:42:42::1 SERVER_AWG_IPV6
-	done
-
-	# Generate random number within private ports range
-	RANDOM_PORT=$(shuf -i49152-65535 -n1)
-	until [[ ${SERVER_PORT} =~ ^[0-9]+$ ]] && [ "${SERVER_PORT}" -ge 1 ] && [ "${SERVER_PORT}" -le 65535 ]; do
-		read -rp "Server AmneziaWG port [1-65535]: " -e -i "${RANDOM_PORT}" SERVER_PORT
-	done
-
-	# Adguard DNS by default
-	until [[ ${CLIENT_DNS_1} =~ ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]]; do
-		read -rp "First DNS resolver to use for the clients: " -e -i 1.1.1.1 CLIENT_DNS_1
-	done
-	until [[ ${CLIENT_DNS_2} =~ ^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]]; do
-		read -rp "Second DNS resolver to use for the clients (optional): " -e -i 1.0.0.1 CLIENT_DNS_2
-		if [[ ${CLIENT_DNS_2} == "" ]]; then
-			CLIENT_DNS_2="${CLIENT_DNS_1}"
-		fi
-	done
-
-	until [[ ${ALLOWED_IPS} =~ ^.+$ ]]; do
-		echo -e "\nAmneziaWG uses a parameter called AllowedIPs to determine what is routed over the VPN."
-		read -rp "Allowed IPs list for generated clients (leave default to route everything): " -e -i '0.0.0.0/0,::/0' ALLOWED_IPS
-		if [[ ${ALLOWED_IPS} == "" ]]; then
-			ALLOWED_IPS="0.0.0.0/0,::/0"
-		fi
-	done
-
-	# Jc
-	RANDOM_AWG_JC=$(shuf -i3-10 -n1)
-	until [[ ${SERVER_AWG_JC} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_JC} >= 1 )) && (( ${SERVER_AWG_JC} <= 128 )); do
-		read -rp "Server AmneziaWG Jc [1-128]: " -e -i ${RANDOM_AWG_JC} SERVER_AWG_JC
-	done
-
-	# Jmin && Jmax
-	readJminAndJmax
-	until [ "${SERVER_AWG_JMIN}" -le "${SERVER_AWG_JMAX}" ]; do
-		echo "AmneziaWG require Jmin < Jmax"
-		readJminAndJmax
-	done
-
-	# S1 && S2
-	generateS1AndS2
-	while (( ${RANDOM_AWG_S1} + 56 == ${RANDOM_AWG_S2} )); do
-		generateS1AndS2
-	done
-	readS1AndS2
-	while (( ${SERVER_AWG_S1} + 56 == ${SERVER_AWG_S2} )); do
-		echo "AmneziaWG require S1 + 56 <> S2"
-		readS1AndS2
-	done
-
-	# H1 && H2 && H3 && H4
-	generateH1AndH2AndH3AndH4
-	while (( ${RANDOM_AWG_H1} == ${RANDOM_AWG_H2} )) || (( ${RANDOM_AWG_H1} == ${RANDOM_AWG_H3} )) || (( ${RANDOM_AWG_H1} == ${RANDOM_AWG_H4} )) || (( ${RANDOM_AWG_H2} == ${RANDOM_AWG_H3} )) || (( ${RANDOM_AWG_H2} == ${RANDOM_AWG_H4} )) || (( ${RANDOM_AWG_H3} == ${RANDOM_AWG_H4} )); do
-		generateH1AndH2AndH3AndH4
-	done
-	readH1AndH2AndH3AndH4
-	while (( ${SERVER_AWG_H1} == ${SERVER_AWG_H2} )) || (( ${SERVER_AWG_H1} == ${SERVER_AWG_H3} )) || (( ${SERVER_AWG_H1} == ${SERVER_AWG_H4} )) || (( ${SERVER_AWG_H2} == ${SERVER_AWG_H3} )) || (( ${SERVER_AWG_H2} == ${SERVER_AWG_H4} )) || (( ${SERVER_AWG_H3} == ${SERVER_AWG_H4} )); do
-		echo "AmneziaWG require H1 and H2 and H3 and H4 be different"
-		readH1AndH2AndH3AndH4
-	done
-
-	echo ""
-	echo "Okay, that was all I needed. We are ready to setup your AmneziaWG server now."
-	echo "You will be able to generate a client at the end of the installation."
-	read -n1 -r -p "Press any key to continue..."
+    echo ""
+    echo "Okay, that was all I needed. We are ready to setup your AmneziaWG server now."
+    echo "You will be able to generate a client at the end of the installation."
+    read -n1 -r -p "Press any key to continue..."
 }
+
 
 function installAmneziaWG() {
 	# Run setup questions first
@@ -471,15 +435,10 @@ AllowedIPs = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128" >>"${SERVER_AWG_CONF}
 
     awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 
-    # Generate QR code if qrencode is installed
-    if command -v qrencode &>/dev/null; then
-        echo -e "${GREEN}\nHere is your client config file as a QR Code:\n${NC}"
-        qrencode -t ansiutf8 -l L <"${HOME_DIR}/${CLIENT_NAME}.conf"
-        echo ""
-    fi
-
     echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME}.conf${NC}"
 }
+
+
 
 
 function listClients() {
