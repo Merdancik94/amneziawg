@@ -190,12 +190,16 @@ function installQuestions() {
             ;;
     esac
 
+    # Prompt for port number
+    until [[ ${SERVER_PORT} =~ ^[0-9]+$ ]] && [ "${SERVER_PORT}" -ge 1 ] && [ "${SERVER_PORT}" -le 65535 ]; do
+        read -rp "Server AmneziaWG port [1-65535]: " -e -i 443 SERVER_PORT
+    done
+
     # Use default values for other settings
     SERVER_PUB_NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
     SERVER_AWG_NIC="awg0"
     SERVER_AWG_IPV4="10.66.66.1"
     SERVER_AWG_IPV6="fd42:42:42::1"
-    SERVER_PORT=$(shuf -i49152-65535 -n1)
     ALLOWED_IPS="0.0.0.0/0,::/0"
     SERVER_AWG_JC=$(shuf -i3-10 -n1)
     SERVER_AWG_JMIN=50
@@ -212,6 +216,7 @@ function installQuestions() {
     echo "You will be able to generate a client at the end of the installation."
     read -n1 -r -p "Press any key to continue..."
 }
+
 
 
 function installAmneziaWG() {
