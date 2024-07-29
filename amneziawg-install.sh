@@ -414,6 +414,7 @@ function newClient() {
     for DOT_IP in {2..254}; do
         DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
         if [[ ${DOT_EXISTS} == '0' ]]; then
+            CLIENT_AWG_IPV4="${SERVER_AWG_IPV4::-1}${DOT_IP}"
             break
         fi
     done
@@ -424,29 +425,12 @@ function newClient() {
         exit 1
     fi
 
-    BASE_IP=$(echo "$SERVER_AWG_IPV4" | awk -F '.' '{ print $1"."$2"."$3 }')
-    until [[ ${IPV4_EXISTS} == '0' ]]; do
-        read -rp "Client AmneziaWG IPv4: ${BASE_IP}." -e -i "${DOT_IP}" DOT_IP
-        CLIENT_AWG_IPV4="${BASE_IP}.${DOT_IP}"
-        IPV4_EXISTS=$(grep -c "$CLIENT_AWG_IPV4/32" "${SERVER_AWG_CONF}")
-
-        if [[ ${IPV4_EXISTS} != 0 ]]; then
-            echo ""
-            echo -e "${ORANGE}A client with the specified IPv4 was already created, please choose another IPv4.${NC}"
-            echo ""
-        fi
-    done
-
     BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
-    until [[ ${IPV6_EXISTS} == '0' ]]; do
-        read -rp "Client AmneziaWG IPv6: ${BASE_IP}::" -e -i "${DOT_IP}" DOT_IP
-        CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
-        IPV6_EXISTS=$(grep -c "${CLIENT_AWG_IPV6}/128" "${SERVER_AWG_CONF}")
-
-        if [[ ${IPV6_EXISTS} != 0 ]]; then
-            echo ""
-            echo -e "${ORANGE}A client with the specified IPv6 was already created, please choose another IPv6.${NC}"
-            echo ""
+    for DOT_IP in {2..254}; do
+        IPV6_EXISTS=$(grep -c "${BASE_IP}::${DOT_IP}/128" "${SERVER_AWG_CONF}")
+        if [[ ${IPV6_EXISTS} == '0' ]]; then
+            CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
+            break
         fi
     done
 
