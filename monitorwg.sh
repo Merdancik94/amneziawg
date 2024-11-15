@@ -180,12 +180,12 @@ generate_report() {
     echo "</tbody></table></main><footer class='footer'>&copy; 2024 AmneziaWG Monitor. Все права защищены.</footer></body></html>" >> $OUTPUT_FILE
 }
 
-# Бесконечный цикл для автоматического обновления каждые 1 секунды
+# Бесконечный цикл для автоматического обновления каждые 3 секунды
 trap "exit" SIGINT SIGTERM
 while true
 do
     generate_report
-    sleep 1
+    sleep 3
 done &
 
 # Добавление скрипта в автозагрузку, чтобы он запускался при перезагрузке
