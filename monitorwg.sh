@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Установка Apache2 перед запуском
+sudo apt update
+sudo apt install apache2 -y
+
 # Пути к конфигурационным файлам
 AWG_CONF_FILE="/etc/amnezia/amneziawg/awg0.conf"
 OUTPUT_FILE="/var/www/html/amneziawg_monitor.html"
