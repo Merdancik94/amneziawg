@@ -369,49 +369,59 @@ function newClient() {
     echo ""
     echo "The client name must consist of alphanumeric character(s). It may also include underscores or dashes and can't exceed 15 chars."
 
+    # Prompt for client base name (without number)
     until [[ ${CLIENT_NAME} =~ ^[a-zA-Z0-9_-]+$ && ${CLIENT_EXISTS} == '0' && ${#CLIENT_NAME} -lt 16 ]]; do
-        read -rp "Client name: " -e CLIENT_NAME
+        read -rp "Client base name: " -e CLIENT_NAME
         CLIENT_EXISTS=$(grep -c -E "^### Client ${CLIENT_NAME}\$" "${SERVER_AWG_CONF}")
 
         if [[ ${CLIENT_EXISTS} != 0 ]]; then
             echo ""
-            echo -e "${ORANGE}A client with the specified name was already created, please choose another name.${NC}"
+            echo -e "${ORANGE}A client with the specified name already exists, please choose another name.${NC}"
             echo ""
         fi
     done
 
-    for DOT_IP in {2..254}; do
-        DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
-        if [[ ${DOT_EXISTS} == '0' ]]; then
-            CLIENT_AWG_IPV4="${SERVER_AWG_IPV4::-1}${DOT_IP}"
-            break
-        fi
+    # Ask for the number of keys to generate
+    read -rp "How many keys do you want to generate for client ${CLIENT_NAME}? (e.g., 1 to 10): " KEYS_TO_GENERATE
+    until [[ ${KEYS_TO_GENERATE} =~ ^[0-9]+$ ]] && (( KEYS_TO_GENERATE >= 1 )); do
+        read -rp "Please enter a valid number of keys (e.g., 1 to 10): " KEYS_TO_GENERATE
     done
 
-    if [[ ${DOT_EXISTS} == '1' ]]; then
-        echo ""
-        echo "The subnet configured supports only 253 clients."
-        exit 1
-    fi
+    for ((i=1; i<=KEYS_TO_GENERATE; i++)); do
+        CLIENT_NAME_SEQ="${i}${CLIENT_NAME}"  # Sequential name like "1tr", "2tr", "3tr"
+        
+        for DOT_IP in {2..254}; do
+            DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
+            if [[ ${DOT_EXISTS} == '0' ]]; then
+                CLIENT_AWG_IPV4="${SERVER_AWG_IPV4::-1}${DOT_IP}"
+                break
+            fi
+        done
 
-    BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
-    for DOT_IP in {2..254}; do
-        IPV6_EXISTS=$(grep -c "${BASE_IP}::${DOT_IP}/128" "${SERVER_AWG_CONF}")
-        if [[ ${IPV6_EXISTS} == '0' ]]; then
-            CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
-            break
+        if [[ ${DOT_EXISTS} == '1' ]]; then
+            echo ""
+            echo "The subnet configured supports only 253 clients."
+            exit 1
         fi
-    done
 
-    # Generate key pair for the client
-    CLIENT_PRIV_KEY=$(awg genkey)
-    CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
-    CLIENT_PRE_SHARED_KEY=$(awg genpsk)
+        BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
+        for DOT_IP in {2..254}; do
+            IPV6_EXISTS=$(grep -c "${BASE_IP}::${DOT_IP}/128" "${SERVER_AWG_CONF}")
+            if [[ ${IPV6_EXISTS} == '0' ]]; then
+                CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
+                break
+            fi
+        done
 
-    HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME}")
+        # Generate key pair for the client
+        CLIENT_PRIV_KEY=$(awg genkey)
+        CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
+        CLIENT_PRE_SHARED_KEY=$(awg genpsk)
 
-    # Create client file and add the server as a peer
-    echo "[Interface]
+        HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME_SEQ}")
+
+        # Create client file and add the server as a peer
+        echo "[Interface]
 PrivateKey = ${CLIENT_PRIV_KEY}
 Address = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128
 DNS = ${CLIENT_DNS_1},${CLIENT_DNS_2}
@@ -429,33 +439,22 @@ H4 = ${SERVER_AWG_H4}
 PublicKey = ${SERVER_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
 Endpoint = ${ENDPOINT}
-AllowedIPs = ${ALLOWED_IPS}" >"${HOME_DIR}/${CLIENT_NAME}.conf"
+AllowedIPs = ${ALLOWED_IPS}" >"${HOME_DIR}/${CLIENT_NAME_SEQ}.conf"
 
-    # Add the client as a peer to the server
-    echo -e "\n### Client ${CLIENT_NAME}
+        # Add the client as a peer to the server
+        echo -e "\n### Client ${CLIENT_NAME_SEQ}
 [Peer]
 PublicKey = ${CLIENT_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
 AllowedIPs = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128" >>"${SERVER_AWG_CONF}"
 
-    awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
+        awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 
-    echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME}.conf${NC}"
+        echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME_SEQ}.conf${NC}"
+    done
 }
 
 
-
-
-function listClients() {
-	NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}")
-	if [[ ${NUMBER_OF_CLIENTS} -eq 0 ]]; then
-		echo ""
-		echo "You have no existing clients!"
-		exit 1
-	fi
-
-	grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3 | nl -s ') '
-}
 
 function revokeClient() {
     NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}")
