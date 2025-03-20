@@ -488,6 +488,10 @@ function revokeClient() {
     # restart AmneziaWG to apply changes
     awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 }
+function listClients() {
+    echo "Listing all clients:"
+    grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3
+}
 
 
 function uninstallAmneziaWG() {
