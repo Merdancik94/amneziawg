@@ -1,7 +1,8 @@
 #!/bin/bash
-
 # AmneziaWG server installer
 # https://github.com/romikb/amneziawg-install
+
+set -euo pipefail
 
 RED='\033[0;31m'
 ORANGE='\033[0;33m'
@@ -41,7 +42,7 @@ function checkOS() {
 			echo "Your version of Debian (${VERSION_ID}) is not supported. Please use Debian 11 Bullseye or later"
 			exit 1
 		fi
-		OS=debian # overwrite if raspbian
+		OS=debian
 	elif [[ ${OS} == "ubuntu" ]]; then
 		RELEASE_YEAR=$(echo "${VERSION_ID}" | cut -d'.' -f1)
 		if [[ ${RELEASE_YEAR} -lt 20 ]]; then
@@ -66,29 +67,22 @@ function checkOS() {
 
 function getHomeDirForClient() {
 	local CLIENT_NAME=$1
-
 	if [ -z "${CLIENT_NAME}" ]; then
 		echo "Error: getHomeDirForClient() requires a client name as argument"
 		exit 1
 	fi
 
-	# Home directory of the user, where the client configuration will be written
 	if [ -e "/home/${CLIENT_NAME}" ]; then
-		# if $1 is a user name
 		HOME_DIR="/home/${CLIENT_NAME}"
-	elif [ "${SUDO_USER}" ]; then
-		# if not, use SUDO_USER
+	elif [ "${SUDO_USER-}" ]; then
 		if [ "${SUDO_USER}" == "root" ]; then
-			# If running sudo as root
 			HOME_DIR="/root"
 		else
 			HOME_DIR="/home/${SUDO_USER}"
 		fi
 	else
-		# if not SUDO_USER, use /root
 		HOME_DIR="/root"
 	fi
-
 	echo "$HOME_DIR"
 }
 
@@ -101,10 +95,10 @@ function initialCheck() {
 function readJminAndJmax() {
 	SERVER_AWG_JMIN=0
 	SERVER_AWG_JMAX=0
-	until [[ ${SERVER_AWG_JMIN} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_JMIN} >= 1 )) && (( ${SERVER_AWG_JMIN} <= 1280 )); do
+	until [[ ${SERVER_AWG_JMIN} =~ ^[0-9]+$ ]] && (( SERVER_AWG_JMIN >= 1 )) && (( SERVER_AWG_JMIN <= 1280 )); do
 		read -rp "Server AmneziaWG Jmin [1-1280]: " -e -i 50 SERVER_AWG_JMIN
 	done
-	until [[ ${SERVER_AWG_JMAX} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_JMAX} >= 1 )) && (( ${SERVER_AWG_JMAX} <= 1280 )); do
+	until [[ ${SERVER_AWG_JMAX} =~ ^[0-9]+$ ]] && (( SERVER_AWG_JMAX >= 1 )) && (( SERVER_AWG_JMAX <= 1280 )); do
 		read -rp "Server AmneziaWG Jmax [1-1280]: " -e -i 1000 SERVER_AWG_JMAX
 	done
 }
@@ -117,10 +111,10 @@ function generateS1AndS2() {
 function readS1AndS2() {
 	SERVER_AWG_S1=0
 	SERVER_AWG_S2=0
-	until [[ ${SERVER_AWG_S1} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S1} >= 15 )) && (( ${SERVER_AWG_S1} <= 150 )); do
+	until [[ ${SERVER_AWG_S1} =~ ^[0-9]+$ ]] && (( SERVER_AWG_S1 >= 15 )) && (( SERVER_AWG_S1 <= 150 )); do
 		read -rp "Server AmneziaWG S1 [15-150]: " -e -i ${RANDOM_AWG_S1} SERVER_AWG_S1
 	done
-	until [[ ${SERVER_AWG_S2} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_S2} >= 15 )) && (( ${SERVER_AWG_S2} <= 150 )); do
+	until [[ ${SERVER_AWG_S2} =~ ^[0-9]+$ ]] && (( SERVER_AWG_S2 >= 15 )) && (( SERVER_AWG_S2 <= 150 )); do
 		read -rp "Server AmneziaWG S2 [15-150]: " -e -i ${RANDOM_AWG_S2} SERVER_AWG_S2
 	done
 }
@@ -137,16 +131,16 @@ function readH1AndH2AndH3AndH4() {
 	SERVER_AWG_H2=0
 	SERVER_AWG_H3=0
 	SERVER_AWG_H4=0
-	until [[ ${SERVER_AWG_H1} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_H1} >= 5 )) && (( ${SERVER_AWG_H1} <= 2147483647 )); do
+	until [[ ${SERVER_AWG_H1} =~ ^[0-9]+$ ]] && (( SERVER_AWG_H1 >= 5 )) && (( SERVER_AWG_H1 <= 2147483647 )); do
 		read -rp "Server AmneziaWG H1 [5-2147483647]: " -e -i ${RANDOM_AWG_H1} SERVER_AWG_H1
 	done
-	until [[ ${SERVER_AWG_H2} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_H2} >= 5 )) && (( ${SERVER_AWG_H2} <= 2147483647 )); do
+	until [[ ${SERVER_AWG_H2} =~ ^[0-9]+$ ]] && (( SERVER_AWG_H2 >= 5 )) && (( SERVER_AWG_H2 <= 2147483647 )); do
 		read -rp "Server AmneziaWG H2 [5-2147483647]: " -e -i ${RANDOM_AWG_H2} SERVER_AWG_H2
 	done
-	until [[ ${SERVER_AWG_H3} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_H3} >= 5 )) && (( ${SERVER_AWG_H3} <= 2147483647 )); do
+	until [[ ${SERVER_AWG_H3} =~ ^[0-9]+$ ]] && (( SERVER_AWG_H3 >= 5 )) && (( SERVER_AWG_H3 <= 2147483647 )); do
 		read -rp "Server AmneziaWG H3 [5-2147483647]: " -e -i ${RANDOM_AWG_H3} SERVER_AWG_H3
 	done
-	until [[ ${SERVER_AWG_H4} =~ ^[0-9]+$ ]] && (( ${SERVER_AWG_H4} >= 5 )) && (( ${SERVER_AWG_H4} <= 2147483647 )); do
+	until [[ ${SERVER_AWG_H4} =~ ^[0-9]+$ ]] && (( SERVER_AWG_H4 >= 5 )) && (( SERVER_AWG_H4 <= 2147483647 )); do
 		read -rp "Server AmneziaWG H4 [5-2147483647]: " -e -i ${RANDOM_AWG_H4} SERVER_AWG_H4
 	done
 }
@@ -158,44 +152,30 @@ function installQuestions() {
     echo "You can keep the default options and just press enter if you are ok with them."
     echo ""
 
-    # Detect public IPv4 or IPv6 address and pre-fill for the user
     SERVER_PUB_IP=$(ip -4 addr | sed -ne 's|^.* inet \([^/]*\)/.* scope global.*$|\1|p' | awk '{print $1}' | head -1)
     if [[ -z ${SERVER_PUB_IP} ]]; then
-        # Detect public IPv6 address
         SERVER_PUB_IP=$(ip -6 addr | sed -ne 's|^.* inet6 \([^/]*\)/.* scope global.*$|\1|p' | head -1)
     fi
     read -rp "Public IPv4 or IPv6 address or domain: " -e -i "${SERVER_PUB_IP}" SERVER_PUB_IP
 
-    # Prompt for DNS settings
     echo "Choose DNS provider:"
     echo "1) Google DNS"
     echo "2) Cloudflare DNS"
     echo "3) AdGuard DNS"
-    until [[ ${DNS_CHOICE} =~ ^[1-3]$ ]]; do
+    until [[ ${DNS_CHOICE-} =~ ^[1-3]$ ]]; do
         read -rp "DNS choice [1-3]: " -e -i 1 DNS_CHOICE
     done
 
     case ${DNS_CHOICE} in
-        1)
-            CLIENT_DNS_1="8.8.8.8"
-            CLIENT_DNS_2="8.8.4.4"
-            ;;
-        2)
-            CLIENT_DNS_1="1.1.1.1"
-            CLIENT_DNS_2="1.0.0.1"
-            ;;
-        3)
-            CLIENT_DNS_1="94.140.14.14"
-            CLIENT_DNS_2="94.140.15.15"
-            ;;
+        1) CLIENT_DNS_1="8.8.8.8";   CLIENT_DNS_2="8.8.4.4" ;;
+        2) CLIENT_DNS_1="1.1.1.1";   CLIENT_DNS_2="1.0.0.1" ;;
+        3) CLIENT_DNS_1="94.140.14.14"; CLIENT_DNS_2="94.140.15.15" ;;
     esac
 
-    # Prompt for port number
-    until [[ ${SERVER_PORT} =~ ^[0-9]+$ ]] && [ "${SERVER_PORT}" -ge 1 ] && [ "${SERVER_PORT}" -le 65535 ]; do
+    until [[ ${SERVER_PORT-} =~ ^[0-9]+$ ]] && [ "${SERVER_PORT}" -ge 1 ] && [ "${SERVER_PORT}" -le 65535 ]; do
         read -rp "Server AmneziaWG port [1-65535]: " -e -i 443 SERVER_PORT
     done
 
-    # Use default values for other settings
     SERVER_PUB_NIC=$(ip -4 route ls | grep default | grep -Po '(?<=dev )(\S+)' | head -1)
     SERVER_AWG_NIC="awg0"
     SERVER_AWG_IPV4="10.66.66.1"
@@ -215,15 +195,13 @@ function installQuestions() {
     echo "Okay, that was all I needed. We are ready to setup your AmneziaWG server now."
     echo "You will be able to generate a client at the end of the installation."
     read -n1 -r -p "Press any key to continue..."
+    echo ""
 }
 
-
-
 function installAmneziaWG() {
-	# Run setup questions first
 	installQuestions
+	mkdir -p "${AMNEZIAWG_DIR}"
 
-	# Install AmneziaWG tools and module
 	if [[ ${OS} == 'ubuntu' ]]; then
 		if [[ -e /etc/apt/sources.list.d/ubuntu.sources ]]; then
 			if ! grep -q "deb-src" /etc/apt/sources.list.d/ubuntu.sources; then
@@ -236,8 +214,10 @@ function installAmneziaWG() {
 				sed -i 's/^deb/deb-src/' /etc/apt/sources.list.d/amneziawg.sources.list
 			fi
 		fi
+		apt update
 		apt install -y software-properties-common
 		add-apt-repository -y ppa:amnezia/ppa
+		apt update
 		apt install -y amneziawg amneziawg-tools qrencode
 	elif [[ ${OS} == 'debian' ]]; then
 		if ! grep -q "^deb-src" /etc/apt/sources.list; then
@@ -266,8 +246,9 @@ function installAmneziaWG() {
 	SERVER_PRIV_KEY=$(awg genkey)
 	SERVER_PUB_KEY=$(echo "${SERVER_PRIV_KEY}" | awg pubkey)
 
-	# Save WireGuard settings
-	echo "SERVER_PUB_IP=${SERVER_PUB_IP}
+	# Save settings
+	cat > "${AMNEZIAWG_DIR}/params" <<-EOF
+SERVER_PUB_IP=${SERVER_PUB_IP}
 SERVER_PUB_NIC=${SERVER_PUB_NIC}
 SERVER_AWG_NIC=${SERVER_AWG_NIC}
 SERVER_AWG_IPV4=${SERVER_AWG_IPV4}
@@ -286,10 +267,12 @@ SERVER_AWG_S2=${SERVER_AWG_S2}
 SERVER_AWG_H1=${SERVER_AWG_H1}
 SERVER_AWG_H2=${SERVER_AWG_H2}
 SERVER_AWG_H3=${SERVER_AWG_H3}
-SERVER_AWG_H4=${SERVER_AWG_H4}" >"${AMNEZIAWG_DIR}/params"
+SERVER_AWG_H4=${SERVER_AWG_H4}
+EOF
 
-	# Add server interface
-	echo "[Interface]
+	# Server interface
+	cat > "${SERVER_AWG_CONF}" <<-EOF
+[Interface]
 Address = ${SERVER_AWG_IPV4}/24,${SERVER_AWG_IPV6}/64
 ListenPort = ${SERVER_PORT}
 PrivateKey = ${SERVER_PRIV_KEY}
@@ -301,15 +284,19 @@ S2 = ${SERVER_AWG_S2}
 H1 = ${SERVER_AWG_H1}
 H2 = ${SERVER_AWG_H2}
 H3 = ${SERVER_AWG_H3}
-H4 = ${SERVER_AWG_H4}" >"${SERVER_AWG_CONF}"
+H4 = ${SERVER_AWG_H4}
+EOF
 
-	if pgrep firewalld; then
+	if pgrep -x firewalld >/dev/null 2>&1; then
 		FIREWALLD_IPV4_ADDRESS=$(echo "${SERVER_AWG_IPV4}" | cut -d"." -f1-3)".0"
 		FIREWALLD_IPV6_ADDRESS=$(echo "${SERVER_AWG_IPV6}" | sed 's/:[^:]*$/:0/')
-		echo "PostUp = firewall-cmd --add-port ${SERVER_PORT}/udp && firewall-cmd --add-rich-rule='rule family=ipv4 source address=${FIREWALLD_IPV4_ADDRESS}/24 masquerade' && firewall-cmd --add-rich-rule='rule family=ipv6 source address=${FIREWALLD_IPV6_ADDRESS}/24 masquerade'
-PostDown = firewall-cmd --remove-port ${SERVER_PORT}/udp && firewall-cmd --remove-rich-rule='rule family=ipv4 source address=${FIREWALLD_IPV4_ADDRESS}/24 masquerade' && firewall-cmd --remove-rich-rule='rule family=ipv6 source address=${FIREWALLD_IPV6_ADDRESS}/24 masquerade'" >>"${SERVER_AWG_CONF}"
+		cat >> "${SERVER_AWG_CONF}" <<-EOF
+PostUp = firewall-cmd --add-port ${SERVER_PORT}/udp && firewall-cmd --add-rich-rule='rule family=ipv4 source address=${FIREWALLD_IPV4_ADDRESS}/24 masquerade' && firewall-cmd --add-rich-rule='rule family=ipv6 source address=${FIREWALLD_IPV6_ADDRESS}/24 masquerade'
+PostDown = firewall-cmd --remove-port ${SERVER_PORT}/udp && firewall-cmd --remove-rich-rule='rule family=ipv4 source address=${FIREWALLD_IPV4_ADDRESS}/24 masquerade' && firewall-cmd --remove-rich-rule='rule family=ipv6 source address=${FIREWALLD_IPV6_ADDRESS}/24 masquerade'
+EOF
 	else
-		echo "PostUp = iptables -I INPUT -p udp --dport ${SERVER_PORT} -j ACCEPT
+		cat >> "${SERVER_AWG_CONF}" <<-EOF
+PostUp = iptables -I INPUT -p udp --dport ${SERVER_PORT} -j ACCEPT
 PostUp = iptables -I FORWARD -i ${SERVER_PUB_NIC} -o ${SERVER_AWG_NIC} -j ACCEPT
 PostUp = iptables -I FORWARD -i ${SERVER_AWG_NIC} -j ACCEPT
 PostUp = iptables -t nat -A POSTROUTING -o ${SERVER_PUB_NIC} -j MASQUERADE
@@ -324,13 +311,13 @@ PostDown = iptables -t nat -D POSTROUTING -o ${SERVER_PUB_NIC} -j MASQUERADE
 PostDown = ip6tables -D INPUT -p udp --dport ${SERVER_PORT} -j ACCEPT
 PostDown = ip6tables -D FORWARD -i ${SERVER_PUB_NIC} -o ${SERVER_AWG_NIC} -j ACCEPT
 PostDown = ip6tables -D FORWARD -i ${SERVER_AWG_NIC} -j ACCEPT
-PostDown = ip6tables -t nat -D POSTROUTING -o ${SERVER_PUB_NIC} -j MASQUERADE" >>"${SERVER_AWG_CONF}"
+PostDown = ip6tables -t nat -D POSTROUTING -o ${SERVER_PUB_NIC} -j MASQUERADE
+EOF
 	fi
 
-	# Enable routing on the server
+	# Enable routing
 	echo "net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1" >/etc/sysctl.d/awg.conf
-
 	sysctl --system
 
 	systemctl start "awg-quick@${SERVER_AWG_NIC}"
@@ -339,89 +326,112 @@ net.ipv6.conf.all.forwarding = 1" >/etc/sysctl.d/awg.conf
 	newClient
 	echo -e "${GREEN}If you want to add more clients, you simply need to run this script another time!${NC}"
 
-	# Check if AmneziaWG is running
-	systemctl is-active --quiet "awg-quick@${SERVER_AWG_NIC}"
-	AWG_RUNNING=$?
-
-	# AmneziaWG might not work if we updated the kernel. Tell the user to reboot
-	if [[ ${AWG_RUNNING} -ne 0 ]]; then
+	if ! systemctl is-active --quiet "awg-quick@${SERVER_AWG_NIC}"; then
 		echo -e "\n${RED}WARNING: AmneziaWG does not seem to be running.${NC}"
 		echo -e "${ORANGE}You can check if AmneziaWG is running with: systemctl status awg-quick@${SERVER_AWG_NIC}${NC}"
 		echo -e "${ORANGE}If you get something like \"Cannot find device ${SERVER_AWG_NIC}\", please reboot!${NC}"
-	else # AmneziaWG is running
+	else
 		echo -e "\n${GREEN}AmneziaWG is running.${NC}"
 		echo -e "${GREEN}You can check the status of AmneziaWG with: systemctl status awg-quick@${SERVER_AWG_NIC}\n\n${NC}"
 		echo -e "${ORANGE}If you don't have internet connectivity from your client, try to reboot the server.${NC}"
 	fi
 }
 
+function allocate_client_ips() {
+	# Prints two lines: IPv4 then IPv6
+	local CLIENT_AWG_IPV4=""
+	local CLIENT_AWG_IPV6=""
+
+	for DOT_IP in {2..254}; do
+		local DOT_EXISTS
+		DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}" || true)
+		if [[ ${DOT_EXISTS} == '0' ]]; then
+			CLIENT_AWG_IPV4="${SERVER_AWG_IPV4::-1}${DOT_IP}"
+			break
+		fi
+	done
+	if [[ -z "${CLIENT_AWG_IPV4}" ]]; then
+		echo "The subnet configured supports only 253 clients." >&2
+		exit 1
+	fi
+
+	local BASE_IP
+	BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
+	for DOT_IP in {2..254}; do
+		local IPV6_EXISTS
+		IPV6_EXISTS=$(grep -c "${BASE_IP}::${DOT_IP}/128" "${SERVER_AWG_CONF}" || true)
+		if [[ ${IPV6_EXISTS} == '0' ]]; then
+			CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
+			break
+		fi
+	done
+	if [[ -z "${CLIENT_AWG_IPV6}" ]]; then
+		echo "No free IPv6 found in /64 pool." >&2
+		exit 1
+	fi
+
+	echo "${CLIENT_AWG_IPV4}"
+	echo "${CLIENT_AWG_IPV6}"
+}
+
 function newClient() {
-    # If SERVER_PUB_IP is IPv6, add brackets if missing
-    if [[ ${SERVER_PUB_IP} =~ .*:.* ]]; then
-        if [[ ${SERVER_PUB_IP} != *"["* ]] || [[ ${SERVER_PUB_IP} != *"]"* ]]; then
-            SERVER_PUB_IP="[${SERVER_PUB_IP}]"
-        fi
-    fi
-    ENDPOINT="${SERVER_PUB_IP}:${SERVER_PORT}"
+	# Add brackets for IPv6 endpoint if missing:
+	if [[ ${SERVER_PUB_IP} == *:* && ${SERVER_PUB_IP} != \[* ]]; then
+		SERVER_PUB_IP="[${SERVER_PUB_IP}]"
+	fi
+	ENDPOINT="${SERVER_PUB_IP}:${SERVER_PORT}"
 
-    echo ""
-    echo "Client configuration"
-    echo ""
-    echo "The client name must consist of alphanumeric character(s). It may also include underscores or dashes and can't exceed 15 chars."
+	echo ""
+	echo "Client configuration"
+	echo ""
+	echo "The client name must consist of alphanumeric character(s). It may also include underscores or dashes and can't exceed 15 chars."
 
-    # Prompt for client base name (without number)
-    until [[ ${CLIENT_NAME} =~ ^[a-zA-Z0-9_-]+$ && ${CLIENT_EXISTS} == '0' && ${#CLIENT_NAME} -lt 16 ]]; do
-        read -rp "Client base name: " -e CLIENT_NAME
-        CLIENT_EXISTS=$(grep -c -E "^### Client ${CLIENT_NAME}\$" "${SERVER_AWG_CONF}")
+	# Ask: one or many
+	ADD_MODE=""
+	until [[ "${ADD_MODE}" =~ ^(1|m|M)$ ]]; do
+		read -rp "Add one client or many? [1/m]: " -e -i 1 ADD_MODE
+	done
 
-        if [[ ${CLIENT_EXISTS} != 0 ]]; then
-            echo ""
-            echo -e "${ORANGE}A client with the specified name already exists, please choose another name.${NC}"
-            echo ""
-        fi
-    done
+	# Prompt for client base name (without number)
+	CLIENT_EXISTS=0
+	until [[ ${CLIENT_NAME-} =~ ^[a-zA-Z0-9_-]+$ && ${CLIENT_EXISTS} == '0' && ${#CLIENT_NAME} -lt 16 ]]; do
+		read -rp "Client base name: " -e CLIENT_NAME
+		CLIENT_EXISTS=$(grep -c -E "^### Client ${CLIENT_NAME}\$" "${SERVER_AWG_CONF}" || true)
+		if [[ ${CLIENT_EXISTS} != 0 ]]; then
+			echo ""
+			echo -e "${ORANGE}A client with the specified name already exists, please choose another name.${NC}"
+			echo ""
+		fi
+	done
 
-    # Ask for the number of keys to generate
-    read -rp "How many keys do you want to generate for client ${CLIENT_NAME}? (e.g., 1 to 10): " KEYS_TO_GENERATE
-    until [[ ${KEYS_TO_GENERATE} =~ ^[0-9]+$ ]] && (( KEYS_TO_GENERATE >= 1 )); do
-        read -rp "Please enter a valid number of keys (e.g., 1 to 10): " KEYS_TO_GENERATE
-    done
+	# Decide count
+	if [[ "${ADD_MODE}" == "1" ]]; then
+		KEYS_TO_GENERATE=1
+	else
+		read -rp "How many clients to create for base \"${CLIENT_NAME}\"? (1-253): " KEYS_TO_GENERATE
+		until [[ ${KEYS_TO_GENERATE} =~ ^[0-9]+$ ]] && (( KEYS_TO_GENERATE >= 1 )) && (( KEYS_TO_GENERATE <= 253 )); do
+			read -rp "Please enter a valid number (1-253): " KEYS_TO_GENERATE
+		done
+	fi
 
-    for ((i=1; i<=KEYS_TO_GENERATE; i++)); do
-        CLIENT_NAME_SEQ="${i}${CLIENT_NAME}"  # Sequential name like "1tr", "2tr", "3tr"
-        
-        for DOT_IP in {2..254}; do
-            DOT_EXISTS=$(grep -c "${SERVER_AWG_IPV4::-1}${DOT_IP}" "${SERVER_AWG_CONF}")
-            if [[ ${DOT_EXISTS} == '0' ]]; then
-                CLIENT_AWG_IPV4="${SERVER_AWG_IPV4::-1}${DOT_IP}"
-                break
-            fi
-        done
+	for ((i=1; i<=KEYS_TO_GENERATE; i++)); do
+		CLIENT_NAME_SEQ="${i}${CLIENT_NAME}"  # e.g., 1tr, 2tr, 3tr
 
-        if [[ ${DOT_EXISTS} == '1' ]]; then
-            echo ""
-            echo "The subnet configured supports only 253 clients."
-            exit 1
-        fi
+		# allocate IPs
+		mapfile -t IP_LINES < <(allocate_client_ips)
+		CLIENT_AWG_IPV4="${IP_LINES[0]}"
+		CLIENT_AWG_IPV6="${IP_LINES[1]}"
 
-        BASE_IP=$(echo "$SERVER_AWG_IPV6" | awk -F '::' '{ print $1 }')
-        for DOT_IP in {2..254}; do
-            IPV6_EXISTS=$(grep -c "${BASE_IP}::${DOT_IP}/128" "${SERVER_AWG_CONF}")
-            if [[ ${IPV6_EXISTS} == '0' ]]; then
-                CLIENT_AWG_IPV6="${BASE_IP}::${DOT_IP}"
-                break
-            fi
-        done
+		# keys
+		CLIENT_PRIV_KEY=$(awg genkey)
+		CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
+		CLIENT_PRE_SHARED_KEY=$(awg genpsk)
 
-        # Generate key pair for the client
-        CLIENT_PRIV_KEY=$(awg genkey)
-        CLIENT_PUB_KEY=$(echo "${CLIENT_PRIV_KEY}" | awg pubkey)
-        CLIENT_PRE_SHARED_KEY=$(awg genpsk)
+		HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME_SEQ}")
 
-        HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME_SEQ}")
-
-        # Create client file and add the server as a peer
-        echo "[Interface]
+		# client file
+		cat > "${HOME_DIR}/${CLIENT_NAME_SEQ}.conf" <<-EOF
+[Interface]
 PrivateKey = ${CLIENT_PRIV_KEY}
 Address = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128
 DNS = ${CLIENT_DNS_1},${CLIENT_DNS_2}
@@ -439,25 +449,26 @@ H4 = ${SERVER_AWG_H4}
 PublicKey = ${SERVER_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
 Endpoint = ${ENDPOINT}
-AllowedIPs = ${ALLOWED_IPS}" >"${HOME_DIR}/${CLIENT_NAME_SEQ}.conf"
+AllowedIPs = ${ALLOWED_IPS}
+EOF
 
-        # Add the client as a peer to the server
-        echo -e "\n### Client ${CLIENT_NAME_SEQ}
+		# add to server
+		cat >> "${SERVER_AWG_CONF}" <<-EOF
+
+### Client ${CLIENT_NAME_SEQ}
 [Peer]
 PublicKey = ${CLIENT_PUB_KEY}
 PresharedKey = ${CLIENT_PRE_SHARED_KEY}
-AllowedIPs = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128" >>"${SERVER_AWG_CONF}"
+AllowedIPs = ${CLIENT_AWG_IPV4}/32,${CLIENT_AWG_IPV6}/128
+EOF
 
-        awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
-
-        echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME_SEQ}.conf${NC}"
-    done
+		awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
+		echo -e "${GREEN}Your client config file is in ${HOME_DIR}/${CLIENT_NAME_SEQ}.conf${NC}"
+	done
 }
 
-
-
 function revokeClient() {
-    NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}")
+    NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}" || true)
     if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
         echo ""
         echo "You have no existing clients!"
@@ -467,32 +478,27 @@ function revokeClient() {
     echo ""
     echo "Select the existing client you want to revoke"
     grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3 | nl -s ') '
-    until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-        if [[ ${CLIENT_NUMBER} == '1' ]]; then
+    until [[ ${CLIENT_NUMBER-} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
+        if [[ ${CLIENT_NUMBER-} == '1' ]]; then
             read -rp "Select one client [1]: " CLIENT_NUMBER
         else
             read -rp "Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
         fi
     done
 
-    # match the selected number to a client name
     CLIENT_NAME=$(grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
-
-    # remove [Peer] block matching $CLIENT_NAME
     sed -i "/^### Client ${CLIENT_NAME}\$/,/^$/d" "${SERVER_AWG_CONF}"
 
-    # remove generated client file
     HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME}")
-    rm -f "${HOME_DIR}/${CLIENT_NAME}.conf"  # Use the correct file name
+    rm -f "${HOME_DIR}/${CLIENT_NAME}.conf"
 
-    # restart AmneziaWG to apply changes
     awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 }
+
 function listClients() {
     echo "Listing all clients:"
     grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3
 }
-
 
 function uninstallAmneziaWG() {
 	echo ""
@@ -503,15 +509,13 @@ function uninstallAmneziaWG() {
 	if [[ $REMOVE == 'y' ]]; then
 		checkOS
 
-		systemctl stop "awg-quick@${SERVER_AWG_NIC}"
-		systemctl disable "awg-quick@${SERVER_AWG_NIC}"
+		systemctl stop "awg-quick@${SERVER_AWG_NIC}" || true
+		systemctl disable "awg-quick@${SERVER_AWG_NIC}" || true
 
-		# Disable routing
 		rm -f /etc/sysctl.d/awg.conf
 		sysctl --system
 
-		# Remove config files
-		rm -rf ${AMNEZIAWG_DIR}/*
+		rm -rf "${AMNEZIAWG_DIR:?}/"*
 
 		if [[ ${OS} == 'ubuntu' ]]; then
 			apt remove -y amneziawg amneziawg-tools
@@ -524,7 +528,7 @@ function uninstallAmneziaWG() {
 		elif [[ ${OS} == 'debian' ]]; then
 			apt-get remove -y amneziawg amneziawg-tools
 			rm -f /etc/apt/sources.list.d/amneziawg.sources.list
-			apt-key del 57290828
+			apt-key del 57290828 || true
 			apt update
 		elif [[ ${OS} == 'fedora' ]]; then
 			dnf remove -y amneziawg-dkms amneziawg-tools
@@ -534,11 +538,7 @@ function uninstallAmneziaWG() {
 			dnf copr disable -y amneziavpn/amneziawg
 		fi
 
-		# Check if AmneziaWG is running
-		systemctl is-active --quiet "awg-quick@${SERVER_AWG_NIC}"
-		AWG_RUNNING=$?
-
-		if [[ ${AWG_RUNNING} -eq 0 ]]; then
+		if systemctl is-active --quiet "awg-quick@${SERVER_AWG_NIC}"; then
 			echo "AmneziaWG failed to uninstall properly."
 			exit 1
 		else
@@ -567,32 +567,21 @@ function manageMenu() {
 	echo "   3) Revoke existing user"
 	echo "   4) Uninstall AmneziaWG"
 	echo "   5) Exit"
-	until [[ ${MENU_OPTION} =~ ^[1-5]$ ]]; do
+	until [[ ${MENU_OPTION-} =~ ^[1-5]$ ]]; do
 		read -rp "Select an option [1-5]: " MENU_OPTION
 	done
 	case "${MENU_OPTION}" in
-	1)
-		newClient
-		;;
-	2)
-		listClients
-		;;
-	3)
-		revokeClient
-		;;
-	4)
-		uninstallAmneziaWG
-		;;
-	5)
-		exit 0
-		;;
+		1) newClient ;;
+		2) listClients ;;
+		3) revokeClient ;;
+		4) uninstallAmneziaWG ;;
+		5) exit 0 ;;
 	esac
 }
 
-# Check for root, virt, OS...
+# ===== main =====
 initialCheck
 
-# Check if AmneziaWG is already installed and load params
 if [[ -e "${AMNEZIAWG_DIR}/params" ]]; then
 	loadParams
 	manageMenu
