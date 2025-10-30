@@ -415,7 +415,12 @@ function newClient() {
 	fi
 
 	for ((i=1; i<=KEYS_TO_GENERATE; i++)); do
-		CLIENT_NAME_SEQ="${i}${CLIENT_NAME}"  # e.g., 1tr, 2tr, 3tr
+		# Name without number if creating a single client; numbered when creating many
+		if [[ "${KEYS_TO_GENERATE}" -eq 1 ]]; then
+			CLIENT_NAME_SEQ="${CLIENT_NAME}"
+		else
+			CLIENT_NAME_SEQ="${i}${CLIENT_NAME}"  # e.g., 1tr, 2tr, 3tr
+		fi
 
 		# allocate IPs
 		mapfile -t IP_LINES < <(allocate_client_ips)
