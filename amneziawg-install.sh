@@ -4,6 +4,16 @@
 
 set -euo pipefail
 
+# Авто-эскалация прав: если не root — перезапускаем через sudo (или su)
+if [ "$EUID" -ne 0 ]; then
+  if command -v sudo >/dev/null 2>&1; then
+    exec sudo -E bash "$0" "$@"
+  else
+    echo "sudo не найден, пробую su..."
+    exec su -c "bash '$0' $*"
+  fi
+fi
+
 RED='\033[0;31m'
 ORANGE='\033[0;33m'
 GREEN='\033[0;32m'
@@ -500,6 +510,86 @@ function revokeClient() {
     awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
 }
 
+function revokeClientsBulk() {
+    NUMBER_OF_CLIENTS=$(grep -c -E "^### Client" "${SERVER_AWG_CONF}" || true)
+    if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+        echo ""
+        echo "У вас нет существующих клиентов!"
+        exit 1
+    fi
+
+    # Снимок имён клиентов (фиксируем порядок один раз!)
+    mapfile -t CLIENTS < <(grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3)
+
+    echo ""
+    echo "Выберите клиентов для отзыва (поддерживается множественный выбор)"
+    nl -w1 -s') ' < <(printf "%s\n" "${CLIENTS[@]}")
+    echo ""
+    echo "Примеры: 1 3 5-7,10"
+    read -rp "Введите номера для отзыва: " SELECTION_RAW
+
+    # Нормализуем разделители к пробелам
+    SELECTION_RAW="${SELECTION_RAW//,/ }"
+
+    # Разворачиваем диапазоны и собираем уникальные валидные индексы
+    declare -A TO_REVOKE=()
+    for token in ${SELECTION_RAW}; do
+        if [[ ${token} =~ ^[0-9]+-[0-9]+$ ]]; then
+            start=${token%-*}
+            end=${token#*-}
+            if (( start > end )); then
+                tmp=$start; start=$end; end=$tmp
+            fi
+            for ((i=start; i<=end; i++)); do
+                if (( i >= 1 && i <= NUMBER_OF_CLIENTS )); then
+                    TO_REVOKE[$i]=1
+                fi
+            done
+        elif [[ ${token} =~ ^[0-9]+$ ]]; then
+            i=${token}
+            if (( i >= 1 && i <= NUMBER_OF_CLIENTS )); then
+                TO_REVOKE[$i]=1
+            fi
+        fi
+    done
+
+    if (( ${#TO_REVOKE[@]} == 0 )); then
+        echo "Не указаны корректные номера клиентов. Прерывание."
+        exit 1
+    fi
+
+    echo ""
+    echo "Будут отозваны следующие клиенты:"
+    for i in "${!TO_REVOKE[@]}"; do
+        name="${CLIENTS[$((i-1))]}"
+        echo "  ${i}) ${name}"
+    done
+    read -rp "Продолжить? [y/N]: " -e CONFIRM
+    CONFIRM=${CONFIRM:-n}
+    if [[ ${CONFIRM} != 'y' && ${CONFIRM} != 'Y' ]]; then
+        echo "Отменено."
+        exit 0
+    fi
+
+    # Удаляем в порядке УБЫВАНИЯ номеров, чтобы индексы не сдвигались
+    for i in $(printf "%s\n" "${!TO_REVOKE[@]}" | sort -rn); do
+        CLIENT_NAME="${CLIENTS[$((i-1))]}"
+
+        # Удаляем блок клиента из server-конфига (до пустой строки или EOF)
+        sed -i "/^### Client ${CLIENT_NAME}\$/,/^$/d" "${SERVER_AWG_CONF}"
+
+        # Удаляем клиентский .conf из домашнего каталога
+        HOME_DIR=$(getHomeDirForClient "${CLIENT_NAME}")
+        rm -f "${HOME_DIR}/${CLIENT_NAME}.conf"
+
+        echo "Revoked: ${CLIENT_NAME}"
+    done
+
+    # Применяем изменения один раз
+    awg syncconf "${SERVER_AWG_NIC}" <(awg-quick strip "${SERVER_AWG_NIC}")
+    echo "Готово."
+}
+
 function listClients() {
     echo "Listing all clients:"
     grep -E "^### Client" "${SERVER_AWG_CONF}" | cut -d ' ' -f 3
@@ -570,17 +660,19 @@ function manageMenu() {
 	echo "   1) Add a new user"
 	echo "   2) List all users"
 	echo "   3) Revoke existing user"
-	echo "   4) Uninstall AmneziaWG"
-	echo "   5) Exit"
-	until [[ ${MENU_OPTION-} =~ ^[1-5]$ ]]; do
-		read -rp "Select an option [1-5]: " MENU_OPTION
+	echo "   4) Revoke multiple users"
+	echo "   5) Uninstall AmneziaWG"
+	echo "   6) Exit"
+	until [[ ${MENU_OPTION-} =~ ^[1-6]$ ]]; do
+		read -rp "Select an option [1-6]: " MENU_OPTION
 	done
 	case "${MENU_OPTION}" in
 		1) newClient ;;
 		2) listClients ;;
 		3) revokeClient ;;
-		4) uninstallAmneziaWG ;;
-		5) exit 0 ;;
+		4) revokeClientsBulk ;;
+		5) uninstallAmneziaWG ;;
+		6) exit 0 ;;
 	esac
 }
 
